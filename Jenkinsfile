@@ -29,6 +29,7 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
                     sh """
+                        echo "$DOCKER_PASS"
                         echo "Logging into Docker Hub..."
                         echo "$DOCKER_PASS" | docker login -u "${DOCKERHUB_REPO}" --password-stdin
                     """
