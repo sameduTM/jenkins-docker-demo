@@ -1,34 +1,51 @@
-
 pipeline {
-  agent any
+	agent any
+	
+	environment {
+		DOCKERHUB_REPO = "samedutm/jenkins-demo"
+		TAG = "latest"
+	}
+	stages {
+		stage('Checkout') {
+			steps {
+				checkout scm
+			}
+		}
 
-  environment {
-    IMAGE_NAME = "my_app"
-    TAG = "latest"
-  }
+        stage('Build Docker Image') {
+            sh """
+                echo "Building Docker Image..."
+                docker build -t ${DOCKERHUB_REPO}:${TAG} .
+            """
+        }
 
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
-    }
+        stage('Docker login') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-creds',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
+                    sh """
+                        echo "Logging into Docker Hub..."
+                        echo "${DOCKER_PASS} | docker login -u ${DOCKERHUB_REPO} --password-stdin"
+                    """
+                }
+            }
+        }
 
-    stage('Build Docker Image') {
-      steps {
-        sh 'docker build -t ${IMAGE_NAME}:${TAG} .'
-      }
-    }
+        stage('Push to Docker Hub') {
+            steps {
+                sh """
+                    docker push ${DOCKERHUB_REPO}:${TAG}
+                """
+            }
+        }
 
-    stage('Test Run') {
-      steps {
-        sh """
-          docker run -d --rm --name test_container ${IMAGE_NAME}:${TAG}
-          sleep 2
-          docker ps
-          docker stop test_container
-        """
-      }
-    }
-  }
+        stage('List Images') {
+            steps {
+                sh "docker images"
+            }
+        }
+	}
 }
