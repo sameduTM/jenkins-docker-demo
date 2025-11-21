@@ -13,10 +13,12 @@ pipeline {
 		}
 
         stage('Build Docker Image') {
-            sh """
-                echo "Building Docker Image..."
-                docker build -t ${DOCKERHUB_REPO}:${TAG} .
-            """
+            steps {
+                sh """
+                    echo "Building Docker Image..."
+                    docker build -t ${DOCKERHUB_REPO}:${TAG} .
+                """
+            }
         }
 
         stage('Docker login') {
