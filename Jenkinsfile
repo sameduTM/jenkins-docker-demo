@@ -9,7 +9,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                git branch: 'main'
+                git branch: 'main',
                     url: 'https://github.com/sameduTM/jenkins-docker-demo.git'
             }
         }
