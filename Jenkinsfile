@@ -1,101 +1,72 @@
 pipeline {
-	agent any
-	
-	environment {
-		DOCKERHUB_REPO = "samedutm/jenkins-demo"
-	}
+    agent any
 
-	stages {
-		stage('Checkout') {
-			steps {
-				checkout scm
-                script {
-                    SHORT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
-                    TIMESTAMP = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
-                }
-			}
-		}
+    environment {
+        DOCKER_IMAGE = "samedutm/jenkins-demo:latest"
+    }
 
-        stage('Run Tests') {
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git 'https://github.com/sameduTM/jenkins-demo.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            sh """
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+            """
+        }
+
+        stage('Lint') {
             steps {
                 sh """
-                    echo "Creating virtual environment..."
-                    python3 -m venv venv
                     . venv/bin/activate
-
-                    echo "Installing dependencies..."
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-
-                    echo "Running tests..."
-                    pytest --maxfail=1 --disable-warnings -q
+                    flake8 .
                 """
             }
         }
 
-        stage('Build Docker Image') {
-            when {
-                expression {
-                    currentBuild.resultIsBetterOrEqualTo('SUCCESS')
-                }
-            }
+        stage('Test') {
             steps {
                 sh """
-                    docker build -t ${DOCKERHUB_REPO}:latest \
-                                 -t ${DOCKERHUB_REPO}:${SHORT_COMMIT} \
-                                 -t ${DOCKERHUB_REPO}:${TIMESTAMP} .
+                    . venv/bin/activate
+                    pytest -q
                 """
             }
         }
 
-        stage('Docker login') {
+        stage('Docker Build & Push') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
                     sh """
-                        echo "$DOCKER_PASS"
-                        echo "Logging into Docker Hub..."
-                        echo "$DOCKER_PASS" | docker login -u "${DOCKER_USER}" --password-stdin
+                        docker build -t ${DOCKER_IMAGE} .
+                        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+                        docker push ${DOCKER_IMAGE}
                     """
+                    }
                 }
             }
         }
 
-        stage('Push to Docker Hub') {
-            steps {
-                sh """
-                    docker push ${DOCKERHUB_REPO}:latest
-                    docker push ${DOCKERHUB_REPO}:${SHORT_COMMIT}
-                    docker push ${DOCKERHUB_REPO}:${TIMESTAMP}
-                """
-            }
-        }
-
-        stage('List Images') {
-            steps {
-                sh "docker images | grep ${DOCKERHUB_REPO}"
-            }
-        }
-
-        stage('Deploy to EC2') {
-            when {
-                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
-            }
+        stage('Deploy') {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
-                        docker pull samedutm/jenkins-demo:latest &&
+                        ssh -i $SSH_KEY -o StrictHostKey=no ubuntu@3.238.196.249 '
+                        docker pull ${DOCKER_IMAGE} &&
                         docker stop jenkins-demo || true &&
                         docker rm jenkins-demo || true &&
-                        docker run -d --name jenkins-demo -p 80:3000 samedutm/jenkins-demo:latest
+                        docker run -d -p 80:3000 --name jenkins-demo ${DOCKER_IMAGE}
                         '
                     """
                 }
             }
         }
-	}
+    }
 }

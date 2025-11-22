@@ -1,1 +1,3 @@
 jenkins-deploy.pem
+venv
+.pytest_cache
