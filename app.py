@@ -8,5 +8,10 @@ def index():
     return {"status": "Webhook works!"}
 
 
+@app.route('/')
+def check_status():
+    return {"status": "OK!"}
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
