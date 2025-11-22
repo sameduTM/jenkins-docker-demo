@@ -8,7 +8,7 @@ def index():
     return {"status": "Webhook works!"}
 
 
-@app.route('/')
+@app.route("/status")
 def check_status():
     return {"status": "OK!"}
 
