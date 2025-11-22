@@ -46,12 +46,16 @@ pipeline {
         stage('Docker Build & Push') {
             steps {
                 script {
-                    withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_PASSWORD')]) {
-                    sh """
-                        docker build -t ${DOCKER_IMAGE} .
-                        echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
-                        docker push ${DOCKER_IMAGE}
-                    """
+                    withCredentials([usernamePassword(
+                        credentialsId: 'dockerhub-creds', 
+                        usernameVariable: 'DOCKERHUB_USERNAME', 
+                        passwordVariable: 'DOCKERHUB_PASSWORD'
+                    )]) {
+                        sh """
+                            docker build -t ${DOCKER_IMAGE} .
+                            echo ${DOCKERHUB_PASSWORD} | docker login -u ${DOCKERHUB_USERNAME} --password-stdin
+                            docker push ${DOCKER_IMAGE}
+                        """
                     }
                 }
             }
@@ -61,7 +65,7 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        ssh -i $SSH_KEY -o StrictHostKey=no ubuntu@3.238.196.249 '
+                        ssh -i \$SSH_KEY -o StrictHostKey=no ubuntu@3.238.196.249 '
                         docker pull ${DOCKER_IMAGE} &&
                         docker stop jenkins-demo || true &&
                         docker rm jenkins-demo || true &&
