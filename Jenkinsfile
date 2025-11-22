@@ -12,13 +12,33 @@ pipeline {
                 script {
                     SHORT_COMMIT = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
                     TIMESTAMP = sh(script: "date +%Y%m%d%H%M%S", returnStdout: true).trim()
-                    echo "Short Commit: ${SHORT_COMMIT}"
-                    echo "Timestamp: ${TIMESTAMP}"
                 }
 			}
 		}
 
+        stage('Run Tests') {
+            steps {
+                sh """
+                    echo "Creating virtual environment..."
+                    python3 -m venv venv
+                    . venv/bin/activate
+
+                    echo "Installing dependencies..."
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+
+                    echo "Running tests..."
+                    pytest --maxfail=1 --disable-warnings -q
+                """
+            }
+        }
+
         stage('Build Docker Image') {
+            when {
+                expression {
+                    currentBuild.resultIsBetterOrEqualTo('SUCCESS')
+                }
+            }
             steps {
                 sh """
                     docker build -t ${DOCKERHUB_REPO}:latest \
