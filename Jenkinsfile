@@ -10,6 +10,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git 'https://github.com/sameduTM/jenkins-docker-demo.git'
+                sh "pwd"
             }
         }
 
