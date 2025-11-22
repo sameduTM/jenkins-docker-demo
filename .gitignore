@@ -1,3 +1,4 @@
 jenkins-deploy.pem
 venv
 .pytest_cache
+/tests/__pycache__/*
