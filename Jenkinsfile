@@ -85,13 +85,13 @@ pipeline {
                 expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
             }
             steps {
-                sshagent(['ec2-ssh']) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh', keyFileVariable: 'SSH_KEY')]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
+                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
                         docker pull samedutm/jenkins-demo:latest &&
                         docker stop jenkins-demo || true &&
                         docker rm jenkins-demo || true &&
-                        docker run -d --name jenkins-demo -p 80:80 samedutm/jenkins-demo:latest
+                        docker run -d --name jenkins-demo -p 80:3000 samedutm/jenkins-demo:latest
                         '
                     """
                 }
