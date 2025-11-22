@@ -79,5 +79,23 @@ pipeline {
                 sh "docker images | grep ${DOCKERHUB_REPO}"
             }
         }
+
+        stage('Deploy to EC2') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
+            steps {
+                sshagent(['ec2-ssh']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
+                        docker pull samedutm/jenkins-demo:latest &&
+                        docker stop jenkins-demo || true &&
+                        docker rm jenkins-demo || true &&
+                        docker run -d --name jenkins-demo -p 80:80 samedutm/jenkins-demo:latest
+                        '
+                    """
+                }
+            }
+        }
 	}
 }
