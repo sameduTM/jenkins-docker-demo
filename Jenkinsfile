@@ -61,17 +61,23 @@ pipeline {
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to EC2') {
+            when {
+                branch 'main'
+            }
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh', keyFileVariable: 'SSH_KEY')]) {
-                    sh """
-                        ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
-                        docker pull ${DOCKER_IMAGE} &&
-                        docker stop jenkins-demo || true &&
-                        docker rm jenkins-demo || true &&
-                        docker run -d -p 80:3000 --name jenkins-demo ${DOCKER_IMAGE}
-                        '
-                    """
+                withCredentials([sshUserPrivateKey(
+                    credentialsId: 'ec2-ssh', 
+                    keyFileVariable: 'SSH_KEY'
+                    )]) {
+                        sh """
+                            ssh -i \$SSH_KEY -o StrictHostKeyChecking=no ubuntu@3.238.196.249 '
+                            docker pull ${DOCKER_IMAGE} &&
+                            docker stop jenkins-demo || true &&
+                            docker rm jenkins-demo || true &&
+                            docker run -d -p 80:3000 --name jenkins-demo ${DOCKER_IMAGE}
+                            '
+                        """
                 }
             }
         }
