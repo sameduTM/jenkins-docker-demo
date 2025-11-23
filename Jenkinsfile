@@ -1,4 +1,8 @@
 pipeline {
+    options {
+        githubProjectProperty(url: 'https://github.com/sameduTM/jenkins-docker-demo')
+    }
+
     agent any
 
     environment {
@@ -63,7 +67,10 @@ pipeline {
 
         stage('Deploy to EC2') {
             when {
-                branch 'main'
+                allOf() {
+                    branch 'main'
+                    not { changeRequest() }
+                }
             }
             steps {
                 withCredentials([sshUserPrivateKey(
