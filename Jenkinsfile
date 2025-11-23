@@ -1,6 +1,6 @@
 pipeline {
     options {
-        githubProjectProperty(url: 'https://github.com/sameduTM/jenkins-docker-demo')
+        githubProjectProperty(url: 'https://github.com/sameduTM/jenkins-docker-demo.git')
     }
 
     agent any
